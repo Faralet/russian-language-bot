@@ -13,15 +13,14 @@ router = Router()
 
 PREMIUM_TEXT = (
     "<b>✨ Premium</b>\n\n"
-    "Premium превращает бота из ежедневной разминки в полноценный личный тренажер.\n\n"
-    "Что входит:\n"
+    "<i>Пока бот в бета-тесте - все функции бесплатно.</i>\n\n"
+    "Что будет в Premium:\n"
     "• занятия без дневного лимита;\n"
     "• все темы, включая экзаменационные;\n"
-    "• тренировка ошибок;\n"
-    "• подробные объяснения;\n"
-    "• расширенная статистика;\n"
-    "• будущий AI-разбор ваших предложений.\n\n"
-    "Бесплатный режим остается мягким: 1 короткая тренировка в день."
+    "• тренировка ошибок по графику повторения;\n"
+    "• разборы заданий в формате ФИПИ;\n"
+    "• статистика и ориентир по баллу;\n"
+    "• разбор твоих предложений (позже)."
 )
 
 
@@ -57,12 +56,7 @@ async def premium_details_callback(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "premium:disabled")
 async def premium_disabled_callback(callback: CallbackQuery) -> None:
-    await callback.message.answer(
-        "<b>Премиум пока не подключен.</b>\n\n"
-        "Сейчас бот работает в тестовом режиме без реальных платежей. "
-        "Когда продуктовая логика будет проверена, сюда можно будет подключить Telegram Stars или другой платежный сценарий."
-    )
-    await callback.answer()
+    await callback.answer("⚙️ В разработке", show_alert=False)
 
 
 @router.callback_query(F.data == "premium:buy_month")
@@ -71,11 +65,7 @@ async def buy_premium_month(callback: CallbackQuery, session: AsyncSession) -> N
     await get_or_create_user(session, callback.from_user)
     settings = get_settings()
     if not settings.enable_payments:
-        await callback.message.answer(
-            "<b>Платежи отключены.</b>\n\n"
-            "Тестируем обучение, меню, прогресс и админку. Премиум-платежи подключим отдельным этапом."
-        )
-        await callback.answer()
+        await callback.answer("⚙️ Платежи в разработке", show_alert=False)
         return
 
     # Для цифровых товаров Telegram использует Stars, валюта XTR.
