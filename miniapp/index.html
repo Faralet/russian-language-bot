@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Точный русский</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:'Manrope',-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;background:#f2f5fc;color:#1a2238;overflow:hidden}
+.app{position:relative;max-width:480px;margin:0 auto;height:100vh;height:100dvh;overflow:hidden}
+.scr{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px 96px;transition:opacity .3s ease,transform .36s cubic-bezier(.22,.9,.32,1)}
+.scr.hide{opacity:0;transform:translateY(8px);pointer-events:none}
+.greet{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+.av{width:42px;height:42px;border-radius:14px;background:linear-gradient(140deg,#2746cf,#4f7bff);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.g1{font-size:13px;color:#8b93a8;font-weight:600;margin:0}
+.g2{font-size:18px;font-weight:800;margin:1px 0 0;letter-spacing:-.01em}
+.fire{margin-left:auto;display:flex;align-items:center;gap:5px;background:#fff3da;color:#ff9f1c;font-weight:800;font-size:14px;padding:7px 11px;border-radius:13px}
+.fire i{font-size:17px}
+.hero{position:relative;background:linear-gradient(135deg,#2545cc 0%,#3a63f5 55%,#4f8bff 100%);border-radius:24px;padding:20px;color:#fff;overflow:hidden;margin-bottom:20px;box-shadow:0 14px 30px rgba(47,84,224,.34)}
+.hero .lbl{font-size:12px;font-weight:700;letter-spacing:.05em;opacity:.92;text-transform:uppercase}
+.hero h3{margin:6px 0 3px;font-size:21px;font-weight:800;letter-spacing:-.01em}
+.hero p{margin:0 0 16px;font-size:13px;opacity:.94;font-weight:500}
+.hbtn{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#2f54e0;border:none;font-family:inherit;font-weight:800;font-size:14px;padding:11px 18px;border-radius:14px;cursor:pointer;transition:transform .12s}
+.hbtn:active{transform:scale(.96)}
+.hring{position:absolute;right:-14px;top:-16px;opacity:.95}
+.spark{position:absolute;right:74px;top:16px;color:#ffd54a;font-size:22px}
+.sec{font-size:13px;font-weight:800;color:#8b93a8;letter-spacing:.02em;margin:0 0 12px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.tile{background:#fff;border-radius:20px;padding:15px;cursor:pointer;box-shadow:0 6px 18px rgba(30,50,120,.07);transition:transform .14s ease;border:none;text-align:left;font-family:inherit;width:100%}
+.tile:active{transform:scale(.96)}
+.tic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:10px}
+.tile .tt{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;color:#1a2238}
+.tile .ts{display:block;font-size:12px;color:#8b93a8;font-weight:600;margin-top:1px}
+.prog{background:#fff;border-radius:20px;padding:16px;display:flex;align-items:center;gap:15px;cursor:pointer;box-shadow:0 6px 18px rgba(30,50,120,.07);border:none;width:100%;font-family:inherit;text-align:left}
+.prog .pt{font-size:15px;font-weight:700;color:#1a2238}
+.prog .ps{font-size:12.5px;color:#8b93a8;font-weight:600;margin-top:2px}
+.chev{margin-left:auto;color:#c2cbe0;font-size:22px}
+.ltop{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.lx{font-size:23px;color:#aab3c9;cursor:pointer;line-height:1;background:none;border:none;padding:0}
+.lp{flex:1;height:8px;border-radius:6px;background:#e2e8f6;overflow:hidden}
+.lpf{height:100%;border-radius:6px;background:linear-gradient(90deg,#2f54e0,#4f8bff);transition:width .4s ease;width:0}
+.step{font-size:12px;font-weight:800;color:#2f54e0;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.q{font-size:23px;font-weight:800;line-height:1.32;letter-spacing:-.01em;margin:0 0 22px}
+.opt{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:#fff;border:2px solid #fff;border-radius:18px;padding:16px;margin-bottom:12px;color:#1a2238;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(30,50,120,.06);transition:transform .1s,border-color .2s,background .2s;font-family:inherit}
+.opt:active{transform:scale(.99)}
+.opt .nk{width:26px;height:26px;border-radius:9px;background:#eef1fa;color:#9aa3bd;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:none;transition:.2s}
+.opt.sel{border-color:#2f54e0;background:#eef2ff}
+.opt.sel .nk{background:#2f54e0;color:#fff}
+.opt.ok{border-color:#1fb57a;background:#eafaf2}
+.opt.ok .nk{background:#1fb57a;color:#fff}
+.opt.no{border-color:#f0524b;background:#fdeeed}
+.opt.no .nk{background:#f0524b;color:#fff}
+.tin{width:100%;border:2px solid #e3e9f7;border-radius:16px;padding:16px;font-size:17px;font-weight:700;color:#1a2238;outline:none;font-family:inherit;background:#fff}
+.tin:focus{border-color:#2f54e0}
+.tin.ok{border-color:#1fb57a;background:#eafaf2}.tin.no{border-color:#f0524b;background:#fdeeed}
+.exp{max-height:0;overflow:hidden;opacity:0;transition:max-height .35s ease,opacity .3s ease}
+.exp.show{max-height:260px;opacity:1;margin-top:10px}
+.expi{background:#fff;border-radius:16px;padding:14px 15px;box-shadow:0 4px 14px rgba(30,50,120,.06)}
+.expt{font-size:14px;font-weight:800;margin:0 0 4px}
+.expt.okc{color:#15a06c}.expt.noc{color:#dd3f38}
+.exp p{margin:0;font-size:13px;font-weight:500;color:#5c6478;line-height:1.5}
+.abar{position:absolute;left:0;right:0;bottom:0;padding:16px 18px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(rgba(242,245,252,0),#f2f5fc 22%)}
+.btn{width:100%;border:none;border-radius:16px;padding:16px;font-family:inherit;font-size:16px;font-weight:800;color:#fff;background:#2f54e0;cursor:pointer;box-shadow:0 8px 20px rgba(47,84,224,.32);transition:transform .12s,opacity .25s}
+.btn:active{transform:scale(.98)}
+.btn.dis{background:#d8ddec;color:#a7afc4;box-shadow:none;pointer-events:none}
+.btn.sec2{background:#eef2ff;color:#2f54e0;box-shadow:none;margin-top:10px}
+.arc{display:flex;flex-direction:column;align-items:center}
+.card{background:#fff;border-radius:22px;padding:20px;box-shadow:0 8px 22px rgba(30,50,120,.07)}
+.b{margin-bottom:15px}
+.bl{display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#5c6478;margin-bottom:6px}
+.bl b{font-weight:800;color:#1a2238}
+.tr{height:10px;border-radius:7px;background:#e4e9f5;overflow:hidden}
+.trf{height:100%;border-radius:7px}
+.insight{display:flex;gap:11px;align-items:flex-start;background:#eef2ff;border-radius:16px;padding:14px;margin-top:4px}
+.insight i{color:#2f54e0;font-size:20px;flex:none}
+.insight p{margin:0;font-size:13px;font-weight:600;color:#37468f;line-height:1.45}
+.pstat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:16px 0 18px}
+.ps{background:#fff;border-radius:16px;padding:14px 8px;text-align:center;box-shadow:0 5px 16px rgba(30,50,120,.06)}
+.ps .v{font-size:20px;font-weight:800}.ps .k{font-size:11px;font-weight:600;color:#8b93a8;margin-top:2px}
+.ach{display:flex;gap:10px;flex-wrap:wrap}
+.chipa{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:10px 13px;font-size:13px;font-weight:700;box-shadow:0 5px 16px rgba(30,50,120,.06)}
+.chipa i{font-size:18px}
+.tabs{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;height:70px;background:#fff;border-top:1px solid #e7ecf8;display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom)}
+.tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:#6b7488;font-size:10.5px;font-weight:700;cursor:pointer;flex:1;padding:6px 0;transition:color .2s;font-family:inherit}
+.tab i{font-size:23px}
+.tab.act{color:#2f54e0}
+.pop{position:fixed;width:9px;height:9px;border-radius:2px;pointer-events:none;z-index:60;animation:pop .8s ease-out forwards}
+@keyframes pop{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(340deg)}}
+.muted{color:#8b93a8;font-weight:600;font-size:13px}
+.skl{background:#e9eef8;border-radius:12px;animation:skl 1.2s infinite}
+@keyframes skl{0%,100%{opacity:1}50%{opacity:.55}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="home" class="scr">
+    <div class="greet"><div class="av" id="hAv">·</div><div><p class="g1">С возвращением</p><p class="g2" id="hHi">Загрузка…</p></div><span class="fire"><i class="ti ti-flame"></i><span id="hStreak">0</span></span></div>
+    <div class="hero">
+      <svg class="hring" width="120" height="120" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="10"/><circle id="hRing" cx="60" cy="60" r="50" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset .8s ease"/></svg>
+      <i class="ti ti-sparkles spark" aria-hidden="true"></i>
+      <div class="lbl">Сегодня</div>
+      <h3>Занятие дня</h3>
+      <p id="hGoal">Поехали к новому баллу</p>
+      <button class="hbtn" onclick="startLesson()">Продолжить<i class="ti ti-arrow-right"></i></button>
+    </div>
+    <p class="sec">Тренажёры</p>
+    <div class="grid">
+      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#e7edff;color:#2f54e0"><i class="ti ti-volume"></i></div><span class="tt">Ударения</span><span class="ts">орфоэпия</span></button>
+      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#def7f4;color:#0fb3a3"><i class="ti ti-typography"></i></div><span class="tt">Паронимы</span><span class="ts">выбор слова</span></button>
+      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#ffeee9;color:#ff6b5b"><i class="ti ti-pencil"></i></div><span class="tt">Сочинение</span><span class="ts">К1–К12</span></button>
+      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#fff2d8;color:#f59a06"><i class="ti ti-book-2"></i></div><span class="tt">Текст ЕГЭ</span><span class="ts">№1–3, 22–26</span></button>
+    </div>
+    <p class="sec">Твой прогресс</p>
+    <button class="prog" onclick="go('score')">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="#e4e9f5" stroke-width="6"/><circle id="hScoreRing" cx="24" cy="24" r="20" fill="none" stroke="#2f54e0" stroke-width="6" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6" transform="rotate(-90 24 24)" style="transition:stroke-dashoffset .8s ease"/></svg>
+      <div><div class="pt" id="hScoreT">Прогноз балла</div><div class="ps" id="hScoreS">пройди занятие</div></div>
+      <i class="ti ti-chevron-right chev"></i>
+    </button>
+  </section>
+
+  <section id="lesson" class="scr hide">
+    <div class="ltop"><button class="lx" onclick="go('home')" aria-label="Закрыть"><i class="ti ti-x"></i></button><div class="lp"><div class="lpf" id="prog"></div></div></div>
+    <div class="step" id="step">Загрузка…</div>
+    <p class="q" id="q"></p>
+    <div id="opts"></div>
+    <div class="exp" id="exp"><div class="expi"><p class="expt" id="expT"></p><p id="expP"></p></div></div>
+    <div class="abar"><button class="btn dis" id="btn" onclick="act()">Проверить</button></div>
+  </section>
+
+  <section id="score" class="scr hide">
+    <p class="g2" style="margin:0 0 16px">Мой балл</p>
+    <div class="card arc">
+      <svg width="160" height="160" viewBox="0 0 160 160"><defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f54e0"/><stop offset="1" stop-color="#19c5b6"/></linearGradient></defs><circle cx="80" cy="80" r="66" fill="none" stroke="#e4e9f5" stroke-width="13"/><circle id="arc" cx="80" cy="80" r="66" fill="none" stroke="url(#grad)" stroke-width="13" stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7" transform="rotate(-90 80 80)" style="transition:stroke-dashoffset 1.1s ease"/><text x="80" y="76" text-anchor="middle" fill="#1a2238" font-size="42" font-weight="800" id="sNum">0</text><text x="80" y="98" text-anchor="middle" fill="#8b93a8" font-size="13" font-weight="600">из 100</text></svg>
+      <p style="margin:6px 0 0;font-size:13px;font-weight:600;color:#8b93a8" id="sSub">прогноз ЕГЭ</p>
+    </div>
+    <p class="sec" style="margin:20px 0 12px">Сильные и слабые места</p>
+    <div id="sBars"></div>
+  </section>
+
+  <section id="profile" class="scr hide">
+    <p class="g2" style="margin:0 0 16px">Профиль</p>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="av" id="pAv" style="width:58px;height:58px;border-radius:20px;font-size:23px">·</div>
+      <div><div style="font-size:19px;font-weight:800" id="pName">—</div><div style="font-size:13px;font-weight:600;color:#8b93a8" id="pSub">—</div></div>
+    </div>
+    <div class="pstat">
+      <div class="ps"><div class="v" style="color:#ff9f1c" id="pStreak">0</div><div class="k">дней серия</div></div>
+      <div class="ps"><div class="v" style="color:#2f54e0" id="pScore">—</div><div class="k">балл</div></div>
+      <div class="ps"><div class="v" style="color:#0fb3a3" id="pCorrect">0</div><div class="k">верных</div></div>
+    </div>
+    <div class="card b" style="margin-bottom:18px"><div class="bl"><span id="pLvlT">Уровень</span><b id="pXp">—</b></div><div class="tr"><div class="trf" id="pLvlBar" style="width:0%;background:linear-gradient(90deg,#2f54e0,#4f8bff)"></div></div></div>
+    <p class="sec" style="margin:0 0 12px">Достижения</p>
+    <div class="ach">
+      <span class="chipa"><i class="ti ti-flame" style="color:#ff9f1c"></i><span id="aStreak">Серия</span></span>
+      <span class="chipa"><i class="ti ti-target-arrow" style="color:#2f54e0"></i>Снайпер</span>
+      <span class="chipa"><i class="ti ti-bolt" style="color:#0fb3a3"></i>Разгон</span>
+      <span class="chipa" id="aLvl"><i class="ti ti-trophy" style="color:#f59a06"></i>Уровень</span>
+    </div>
+  </section>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab act" id="tab-home" onclick="go('home')"><i class="ti ti-home-2"></i>Главная</button>
+    <button class="tab" id="tab-lesson" onclick="startLesson()"><i class="ti ti-flame"></i>Занятие</button>
+    <button class="tab" id="tab-score" onclick="go('score')"><i class="ti ti-chart-arcs"></i>Балл</button>
+    <button class="tab" id="tab-profile" onclick="go('profile')"><i class="ti ti-user"></i>Профиль</button>
+  </nav>
+</div>
+<script>
+var TG=window.Telegram&&window.Telegram.WebApp;
+if(TG){try{TG.expand();TG.ready();if(TG.setHeaderColor)TG.setHeaderColor('#f2f5fc');}catch(e){}}
+function hap(t){try{if(TG&&TG.HapticFeedback)TG.HapticFeedback.impactOccurred(t||'light');}catch(e){}}
+var API='/api';
+function authHeaders(){var h={'Content-Type':'application/json'};if(TG&&TG.initData)h['Authorization']='tma '+TG.initData;return h;}
+async function api(path,opts){opts=opts||{};opts.headers=authHeaders();var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},12000);opts.signal=ctl.signal;var r;try{r=await fetch(API+path,opts);}finally{clearTimeout(tm);}if(!r.ok)throw new Error('api '+r.status);return r.json();}
+var COLORS=['#2f54e0','#19c5b6','#ff9f1c','#ff6b5b','#4f8bff'];
+function pop(){for(var i=0;i<16;i++){var c=document.createElement('div');c.className='pop';c.style.left=(window.innerWidth/2-40+Math.random()*80)+'px';c.style.top=(window.innerHeight*0.34+Math.random()*24)+'px';c.style.background=COLORS[i%COLORS.length];c.style.setProperty('--dx',(Math.random()*180-90)+'px');c.style.setProperty('--dy',(-90-Math.random()*80)+'px');document.body.appendChild(c);setTimeout(function(el){return function(){el.remove();};}(c),820);}}
+var screens=['home','lesson','score','profile'];
+function go(name){
+  screens.forEach(function(k){document.getElementById(k).classList.toggle('hide',k!==name);var tb=document.getElementById('tab-'+k);if(tb)tb.classList.toggle('act',k===name);});
+  document.getElementById('tabs').style.display=(name==='lesson')?'none':'flex';
+  if(TG&&TG.BackButton){try{if(name==='home'){TG.BackButton.hide();}else{TG.BackButton.show();}}catch(e){}}
+  hap('light');
+  if(name==='score')loadScore();
+}
+if(TG&&TG.BackButton){try{TG.BackButton.onClick(function(){go('home');});}catch(e){}}
+
+var DEMO_ME={first_name:'друг',level:4,level_title:'Грамотей',xp:1240,next_threshold:1500,streak:5,answered_today:6,daily_goal:10,total:240,correct:188,accuracy:78,projected_score:78};
+var DEMO_QS=[
+ {exercise_id:-1,type:'single_choice',question:'Где верно поставлено ударение?',options:[{id:1,text:'позвони́т'},{id:2,text:'позво́нит'}],_ok:[1],_f:'позвони́т, звони́шь, звоня́т — ударение на окончании.'},
+ {exercise_id:-2,type:'single_choice',question:'Как сказать правильно?',options:[{id:3,text:'надеть шапку'},{id:4,text:'одеть шапку'}],_ok:[3],_f:'Надевают что-то на себя; одевают кого-то (одеть ребёнка).'},
+ {exercise_id:-3,type:'single_choice',question:'Верное написание (о времени):',options:[{id:5,text:'в течение часа'},{id:6,text:'в течении часа'}],_ok:[5],_f:'В значении времени — предлог «в течение».'}
+];
+var DEMO_SCORE={projected:78,covered:240,items:[{label:'Ударения',mastery:88},{label:'Орфография',mastery:71},{label:'Паронимы',mastery:54},{label:'Пунктуация',mastery:42}]};
+var demo=false;
+
+function letter(n){return (n||'У').trim().charAt(0).toUpperCase();}
+function renderMe(m){
+  document.getElementById('hAv').textContent=letter(m.first_name);
+  document.getElementById('hHi').textContent='Привет, '+m.first_name;
+  document.getElementById('hStreak').textContent=m.streak;
+  var goal=m.daily_goal||10,done=Math.min(m.answered_today||0,goal);
+  document.getElementById('hRing').setAttribute('stroke-dashoffset',314*(1-done/goal));
+  document.getElementById('hGoal').textContent=done>=goal?'Цель дня взята! Так держать':(done+' из '+goal+' · к новому баллу');
+  if(m.projected_score!=null){
+    document.getElementById('hScoreT').textContent='Прогноз балла — '+m.projected_score;
+    document.getElementById('hScoreS').textContent='нажми, чтобы увидеть детали';
+    document.getElementById('hScoreRing').setAttribute('stroke-dashoffset',125.6*(1-m.projected_score/100));
+  }
+  document.getElementById('pAv').textContent=letter(m.first_name);
+  document.getElementById('pName').textContent=m.first_name;
+  document.getElementById('pSub').textContent='Уровень '+m.level+(m.level_title?' · '+m.level_title:'');
+  document.getElementById('pStreak').textContent=m.streak;
+  document.getElementById('pScore').textContent=(m.projected_score!=null?m.projected_score:'—');
+  document.getElementById('pCorrect').textContent=m.correct||0;
+  document.getElementById('pLvlT').textContent='До уровня '+((m.level||1)+1);
+  var nt=m.next_threshold;
+  document.getElementById('pXp').textContent=(m.xp||0)+(nt?(' / '+nt+' XP'):' XP');
+  document.getElementById('pLvlBar').style.width=(nt?Math.min(100,Math.round((m.xp||0)/nt*100)):100)+'%';
+  document.getElementById('aStreak').textContent='Серия '+m.streak;
+  document.getElementById('aLvl').innerHTML='<i class="ti ti-trophy" style="color:#f59a06"></i>Уровень '+m.level;
+}
+async function loadMe(){try{renderMe(await api('/me'));demo=false;}catch(e){demo=true;renderMe(DEMO_ME);}}
+
+var QS=[],lessonId=null,qi=0,sel=-1,state='await',perStage=5;
+function lessonError(){var s=document.getElementById('step');if(s)s.textContent='';document.getElementById('q').textContent='Не удалось загрузить задания';document.getElementById('opts').innerHTML='<p class="muted" style="margin:0 0 14px">Проверь соединение и попробуй еще раз.</p>';document.getElementById('exp').className='exp';var b=document.getElementById('btn');b.className='btn';b.textContent='Повторить';b.onclick=startLesson;}
+async function startLesson(){
+  go('lesson');
+  document.getElementById('step').textContent='Загрузка…';
+  document.getElementById('q').innerHTML='<span class="skl" style="display:block;height:26px;width:80%"></span>';
+  document.getElementById('opts').innerHTML='<div class="skl" style="height:54px;margin-bottom:12px"></div><div class="skl" style="height:54px"></div>';
+  document.getElementById('exp').className='exp';document.getElementById('btn').className='btn dis';
+  try{var d=await api('/lesson');QS=d.questions;lessonId=d.lesson_id;perStage=d.per_stage||5;demo=false;}
+  catch(e){if(TG&&TG.initData){lessonError();return;}demo=true;QS=DEMO_QS.slice();lessonId=null;perStage=5;}
+  qi=0;renderQ();
+}
+function stageLabel(){var per=perStage||5;var st=Math.floor(qi/per)+1;var total=Math.max(1,Math.ceil(QS.length/per));return (total>1?('Этап '+st+'/'+total+' · '):'')+'вопрос '+(qi+1)+' из '+QS.length;}
+function renderQ(){
+  sel=-1;state='await';var d=QS[qi];if(!d){finish();return;}
+  document.getElementById('prog').style.width=(qi/QS.length*100)+'%';
+  document.getElementById('step').textContent=stageLabel();
+  document.getElementById('q').textContent=d.question;
+  var box=document.getElementById('opts');box.innerHTML='';
+  if(d.type==='text_input'){
+    var inp=document.createElement('input');inp.className='tin';inp.id='tinput';inp.placeholder='Впиши ответ…';inp.autocomplete='off';inp.autocapitalize='off';
+    inp.oninput=function(){document.getElementById('btn').className=inp.value.trim()?'btn':'btn dis';};
+    box.appendChild(inp);
+  }else{
+    var keys=['А','Б','В','Г','Д'];
+    d.options.forEach(function(op,i){var b=document.createElement('button');b.className='opt';b.innerHTML='<span class="nk">'+(keys[i]||'•')+'</span><span>'+op.text+'</span>';b.onclick=function(){pick(i,b);};box.appendChild(b);});
+  }
+  document.getElementById('exp').className='exp';
+  var btn=document.getElementById('btn');btn.className='btn dis';btn.textContent='Проверить';btn.onclick=act;
+}
+function pick(i,b){
+  if(state!=='await')return;sel=i;hap('light');
+  document.querySelectorAll('#opts .opt').forEach(function(o){o.classList.remove('sel');});
+  b.classList.add('sel');document.getElementById('btn').className='btn';
+}
+function showExp(correct,text){
+  var exp=document.getElementById('exp');
+  document.getElementById('expT').textContent=correct?'Верно':'Не совсем';
+  document.getElementById('expT').className='expt '+(correct?'okc':'noc');
+  document.getElementById('expP').textContent=text||'';
+  exp.className='exp show';
+  var btn=document.getElementById('btn');btn.className='btn';btn.textContent=(qi<QS.length-1)?'Дальше':'Завершить';btn.onclick=cont;
+  if(correct){pop();hap('light');}else{hap('medium');}
+}
+async function act(){
+  if(state!=='await')return;var d=QS[qi];
+  if(d.type==='text_input'){
+    var val=(document.getElementById('tinput')||{}).value||'';if(!val.trim())return;state='checked';
+    var res;
+    if(demo){res={correct:true,explanation:'(демо) принято: '+val};}
+    else{try{res=await api('/answer',{method:'POST',body:JSON.stringify({lesson_id:lessonId,exercise_id:d.exercise_id,text:val})});}catch(e){res={correct:false,explanation:'Не удалось проверить ответ.'};}}
+    var inp=document.getElementById('tinput');if(inp){inp.disabled=true;inp.className='tin '+(res.correct?'ok':'no');}
+    var ex=res.explanation||'';if(!res.correct&&res.correct_texts&&res.correct_texts.length)ex='Верно: '+res.correct_texts.join(', ')+'. '+ex;
+    showExp(res.correct,ex);
+  }else{
+    if(sel<0)return;state='checked';var ok=[];var expl='';
+    if(demo){var correct=d._ok.indexOf(d.options[sel].id)>=0;ok=d._ok;expl=d._f;markChoice(correct,ok);showExp(correct,expl);return;}
+    var res;
+    try{res=await api('/answer',{method:'POST',body:JSON.stringify({lesson_id:lessonId,exercise_id:d.exercise_id,option_id:d.options[sel].id})});}
+    catch(e){res={correct:false,correct_option_ids:[],explanation:'Не удалось проверить ответ.'};}
+    markChoice(res.correct,res.correct_option_ids||[]);
+    showExp(res.correct,res.explanation||'');
+  }
+}
+function markChoice(correct,okIds){
+  var d=QS[qi];
+  document.querySelectorAll('#opts .opt').forEach(function(o,i){o.classList.remove('sel');if(okIds.indexOf(d.options[i].id)>=0){o.classList.add('ok');o.querySelector('.nk').innerHTML='<i class="ti ti-check"></i>';}});
+  if(!correct){var n=document.querySelectorAll('#opts .opt')[sel];if(n){n.classList.add('no');n.querySelector('.nk').innerHTML='<i class="ti ti-x"></i>';}}
+}
+function cont(){qi++;if(qi>=QS.length){finish();return;}renderQ();hap('light');}
+function finish(){
+  document.getElementById('prog').style.width='100%';
+  document.getElementById('step').textContent='Готово';
+  document.getElementById('q').textContent='Занятие пройдено';
+  document.getElementById('opts').innerHTML='<div style="text-align:center;padding:18px 0"><div style="font-size:52px">🎉</div><p style="font-weight:800;color:#2f54e0;font-size:17px;margin:10px 0 0">Отличная работа!</p><p style="font-weight:600;color:#8b93a8;font-size:13px;margin:4px 0 0">прогресс сохранён</p></div>';
+  document.getElementById('exp').className='exp';
+  var btn=document.getElementById('btn');btn.className='btn';btn.textContent='На главную';btn.onclick=function(){go('home');loadMe();};
+  pop();loadMe();
+}
+
+async function loadScore(){
+  var data;try{data=await api('/score');demo=false;}catch(e){demo=true;data=DEMO_SCORE;}
+  var target=data.projected||0;
+  document.getElementById('sSub').textContent='прогноз ЕГЭ · по '+(data.covered||0)+' ответам';
+  var arc=document.getElementById('arc'),num=document.getElementById('sNum'),C=414.7;
+  arc.style.strokeDashoffset=C*(1-target/100);
+  var n=0;clearInterval(window._s);window._s=setInterval(function(){n+=2;if(n>=target){n=target;clearInterval(window._s);}num.textContent=n;},16);
+  var grad=['#0fb3a3','#2f54e0','#f59a06','#ff6b5b','#9b7bff'];
+  var items=data.items||[];var html='';
+  items.forEach(function(it,i){var m=it.mastery||0;html+='<div class="b"><div class="bl"><span>'+(it.label||'')+'</span><b>'+m+'%</b></div><div class="tr"><div class="trf" style="width:'+m+'%;background:'+grad[i%grad.length]+'"></div></div></div>';});
+  if(items.length){var weak=items.slice().sort(function(a,b){return (a.mastery||0)-(b.mastery||0);})[0];if(weak)html+='<div class="insight"><i class="ti ti-bulb"></i><p>Подтяни тему «'+weak.label+'» — это быстрее всего поднимет балл.</p></div>';}
+  document.getElementById('sBars').innerHTML=html||'<p class="muted">Пройди занятие — и появится прогноз балла.</p>';
+}
+
+loadMe();
+</script>
+</body>
+</html>

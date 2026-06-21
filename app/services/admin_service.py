@@ -15,10 +15,35 @@ class ContentValidationError(ValueError):
 
 
 REQUIRED_EXERCISE_FIELDS = {"topic_slug", "question", "options", "short_explanation"}
+ALLOWED_STATUSES = {"draft", "published", "archived", "rejected", "deleted"}
+ALLOWED_LEVELS = {"basic", "intermediate", "advanced", "exam"}
+ALLOWED_TYPES = {"single_choice"}
 
 
 def _as_bool(value: Any) -> bool:
     return bool(value) if isinstance(value, bool) else str(value).lower() in {"1", "true", "yes", "да"}
+
+
+def validate_options(options: Any) -> None:
+    if not isinstance(options, list) or len(options) < 2:
+        raise ContentValidationError("Поле options должно быть списком минимум из двух вариантов.")
+
+    correct_count = 0
+    texts: list[str] = []
+    for option in options:
+        if not isinstance(option, dict):
+            raise ContentValidationError("Каждый вариант ответа должен быть объектом JSON.")
+        text = str(option.get("text", "")).strip()
+        if not text:
+            raise ContentValidationError("У каждого варианта должен быть непустой text.")
+        texts.append(text)
+        if _as_bool(option.get("is_correct", False)):
+            correct_count += 1
+
+    if len(set(texts)) != len(texts):
+        raise ContentValidationError("Варианты ответа не должны повторяться.")
+    if correct_count != 1:
+        raise ContentValidationError("У упражнения должен быть ровно один правильный вариант: is_correct=true.")
 
 
 def validate_exercise_payload(payload: dict[str, Any]) -> None:
@@ -26,21 +51,24 @@ def validate_exercise_payload(payload: dict[str, Any]) -> None:
     if missing:
         raise ContentValidationError("Не хватает полей: " + ", ".join(sorted(missing)))
 
-    options = payload.get("options")
-    if not isinstance(options, list) or len(options) < 2:
-        raise ContentValidationError("Поле options должно быть списком минимум из двух вариантов.")
+    if not str(payload.get("question", "")).strip():
+        raise ContentValidationError("Поле question не должно быть пустым.")
+    if not str(payload.get("short_explanation", "")).strip():
+        raise ContentValidationError("Поле short_explanation не должно быть пустым.")
 
-    correct_count = 0
-    for option in options:
-        if not isinstance(option, dict):
-            raise ContentValidationError("Каждый вариант ответа должен быть объектом JSON.")
-        if not str(option.get("text", "")).strip():
-            raise ContentValidationError("У каждого варианта должен быть непустой text.")
-        if _as_bool(option.get("is_correct", False)):
-            correct_count += 1
+    level = str(payload.get("level", "basic")).strip()
+    if level not in ALLOWED_LEVELS:
+        raise ContentValidationError(f"level должен быть одним из: {', '.join(sorted(ALLOWED_LEVELS))}.")
 
-    if correct_count != 1:
-        raise ContentValidationError("У упражнения должен быть ровно один правильный вариант: is_correct=true.")
+    exercise_type = str(payload.get("type", "single_choice")).strip()
+    if exercise_type not in ALLOWED_TYPES:
+        raise ContentValidationError(f"type должен быть одним из: {', '.join(sorted(ALLOWED_TYPES))}.")
+
+    tags = payload.get("tags")
+    if tags is not None and (not isinstance(tags, list) or any(not str(tag).strip() for tag in tags)):
+        raise ContentValidationError("tags должен быть списком непустых строк.")
+
+    validate_options(payload.get("options"))
 
 
 async def get_admin_stats(session: AsyncSession) -> str:
@@ -125,8 +153,8 @@ async def create_exercise_from_payload(
         raise ContentValidationError(f"Тема topic_slug='{topic_slug}' не найдена. Откройте /admin → Темы.")
 
     status = str(payload.get("status", "published")).strip() or "published"
-    if status not in {"draft", "published", "archived", "rejected"}:
-        raise ContentValidationError("status должен быть draft, published, archived или rejected.")
+    if status not in ALLOWED_STATUSES:
+        raise ContentValidationError("status должен быть draft, published, archived, rejected или deleted.")
 
     exercise = Exercise(
         topic_id=topic.id,
@@ -196,24 +224,37 @@ async def update_exercise_from_payload(
             setattr(exercise, field, int(value))
         elif field == "status":
             status = str(value)
-            if status not in {"draft", "published", "archived", "rejected"}:
-                raise ContentValidationError("status должен быть draft, published, archived или rejected.")
+            if status not in ALLOWED_STATUSES:
+                raise ContentValidationError("status должен быть draft, published, archived, rejected или deleted.")
             exercise.status = status
             if status == "published" and exercise.published_at is None:
                 exercise.published_at = datetime.utcnow()
+        elif field == "level":
+            level = str(value).strip()
+            if level not in ALLOWED_LEVELS:
+                raise ContentValidationError(f"level должен быть одним из: {', '.join(sorted(ALLOWED_LEVELS))}.")
+            exercise.level = level
+        elif field == "type":
+            exercise_type = str(value).strip()
+            if exercise_type not in ALLOWED_TYPES:
+                raise ContentValidationError(f"type должен быть одним из: {', '.join(sorted(ALLOWED_TYPES))}.")
+            exercise.type = exercise_type
+        elif field in {"question", "short_explanation"}:
+            text_value = str(value).strip() if value is not None else ""
+            if not text_value:
+                raise ContentValidationError(f"Поле {field} не должно быть пустым.")
+            setattr(exercise, field, text_value)
         else:
             setattr(exercise, field, str(value).strip() if value is not None else None)
 
     if "tags" in payload:
-        exercise.tags = list(payload.get("tags") or [])
+        tags = payload.get("tags") or []
+        if not isinstance(tags, list) or any(not str(tag).strip() for tag in tags):
+            raise ContentValidationError("tags должен быть списком непустых строк.")
+        exercise.tags = list(tags)
 
     if "options" in payload:
-        validate_exercise_payload({
-            "topic_slug": "skip",
-            "question": exercise.question or "skip",
-            "short_explanation": exercise.short_explanation or "skip",
-            "options": payload["options"],
-        })
+        validate_options(payload["options"])
         await session.execute(delete(ExerciseOption).where(ExerciseOption.exercise_id == exercise.id))
         for index, option in enumerate(payload["options"], start=1):
             session.add(
@@ -237,7 +278,7 @@ async def set_exercise_status(session: AsyncSession, exercise_id: int, status: s
     exercise = result.scalar_one_or_none()
     if exercise is None:
         raise ContentValidationError(f"Упражнение #{exercise_id} не найдено.")
-    if status not in {"draft", "published", "archived", "rejected"}:
+    if status not in ALLOWED_STATUSES:
         raise ContentValidationError("Недопустимый статус.")
     exercise.status = status
     if status == "published" and exercise.published_at is None:
@@ -249,10 +290,135 @@ async def set_exercise_status(session: AsyncSession, exercise_id: int, status: s
 
 
 async def delete_exercise_by_id(session: AsyncSession, exercise_id: int, admin_user_id: int | None = None) -> None:
+    """Мягкое удаление.
+
+    Физическое удаление каскадом стирало варианты ответа и исторические
+    ответы пользователей, ломая статистику и прогресс. Поэтому упражнение
+    переводится в status='deleted' и исчезает из выдачи, но история остается.
+    """
     result = await session.execute(select(Exercise).where(Exercise.id == exercise_id))
     exercise = result.scalar_one_or_none()
     if exercise is None:
         raise ContentValidationError(f"Упражнение #{exercise_id} не найдено.")
-    await session.delete(exercise)
-    session.add(AdminLog(admin_user_id=admin_user_id, action="delete_exercise", entity_type="exercise", entity_id=exercise_id, details={}))
+    exercise.status = "deleted"
+    session.add(AdminLog(admin_user_id=admin_user_id, action="soft_delete_exercise", entity_type="exercise", entity_id=exercise_id, details={}))
     await session.commit()
+
+
+def _format_exercise_details(exercise: Exercise) -> str:
+    options_lines = []
+    for option in sorted(exercise.options, key=lambda item: item.sort_order):
+        mark = "✅" if option.is_correct else "▫️"
+        options_lines.append(f"{mark} {option.option_text}")
+
+    topic_title = exercise.topic.title if exercise.topic else "без темы"
+    lines = [
+        f"<b>Упражнение #{exercise.id}</b> [{exercise.status}]",
+        "",
+        f"Тема: {topic_title}",
+        f"Уровень: {exercise.level} | Тип: {exercise.type} | Сложность: {exercise.difficulty_score}",
+        "",
+        f"<b>Вопрос:</b> {exercise.question}",
+        "",
+        *options_lines,
+        "",
+        f"<b>Объяснение:</b> {exercise.short_explanation}",
+    ]
+    if exercise.example_text:
+        lines.append(f"<b>Пример:</b> {exercise.example_text}")
+    if exercise.tags:
+        lines.append(f"Теги: {', '.join(exercise.tags)}")
+    lines.extend([
+        "",
+        f"Показов: {exercise.usage_count} | Верно: {exercise.correct_count} | Неверно: {exercise.wrong_count}",
+    ])
+    return "\n".join(lines)
+
+
+async def get_exercise_text(session: AsyncSession, exercise_id: int) -> str:
+    result = await session.execute(
+        select(Exercise)
+        .where(Exercise.id == exercise_id)
+        .options(selectinload(Exercise.options), selectinload(Exercise.topic))
+    )
+    exercise = result.scalar_one_or_none()
+    if exercise is None:
+        raise ContentValidationError(f"Упражнение #{exercise_id} не найдено.")
+    return _format_exercise_details(exercise)
+
+
+async def search_exercises_text(session: AsyncSession, query: str, limit: int = 10) -> str:
+    pattern = f"%{query.strip()}%"
+    result = await session.execute(
+        select(Exercise)
+        .join(Topic, Topic.id == Exercise.topic_id)
+        .options(selectinload(Exercise.topic))
+        .where(
+            Exercise.status != "deleted",
+            (
+                Exercise.question.ilike(pattern)
+                | Exercise.short_explanation.ilike(pattern)
+                | Exercise.full_explanation.ilike(pattern)
+                | Topic.title.ilike(pattern)
+                | func.array_to_string(Exercise.tags, " ").ilike(pattern)
+            ),
+        )
+        .order_by(Exercise.id.desc())
+        .limit(limit)
+    )
+    exercises = result.scalars().all()
+    if not exercises:
+        return f"По запросу «{query}» ничего не найдено."
+
+    lines = [f"<b>Найдено по запросу «{query}»</b> (до {limit}):", ""]
+    for ex in exercises:
+        topic_title = ex.topic.title if ex.topic else "без темы"
+        question = ex.question.replace("\n", " ")[:70]
+        lines.append(f"<b>#{ex.id}</b> [{ex.status}] {topic_title}: {question}")
+    lines.extend(["", "Подробности: <code>/exercise ID</code>"])
+    return "\n".join(lines)
+
+
+async def export_exercises_json(session: AsyncSession, status: str | None = None) -> tuple[str, int]:
+    """Выгружает упражнения в JSON-строку, совместимую с импортом /add_exercise."""
+    import json
+
+    stmt = (
+        select(Exercise)
+        .options(selectinload(Exercise.options), selectinload(Exercise.topic))
+        .order_by(Exercise.id.asc())
+    )
+    if status:
+        if status not in ALLOWED_STATUSES:
+            raise ContentValidationError("Недопустимый статус для экспорта.")
+        stmt = stmt.where(Exercise.status == status)
+    else:
+        stmt = stmt.where(Exercise.status != "deleted")
+
+    result = await session.execute(stmt)
+    exercises = result.scalars().unique().all()
+
+    payload = []
+    for ex in exercises:
+        payload.append(
+            {
+                "id": ex.id,
+                "topic_slug": ex.topic.slug if ex.topic else None,
+                "type": ex.type,
+                "level": ex.level,
+                "question": ex.question,
+                "options": [
+                    {"text": o.option_text, "is_correct": o.is_correct, "explanation": o.explanation}
+                    for o in sorted(ex.options, key=lambda item: item.sort_order)
+                ],
+                "short_explanation": ex.short_explanation,
+                "full_explanation": ex.full_explanation,
+                "example_text": ex.example_text,
+                "interesting_fact": ex.interesting_fact,
+                "exam_type": ex.exam_type,
+                "tags": list(ex.tags or []),
+                "status": ex.status,
+                "difficulty_score": ex.difficulty_score,
+            }
+        )
+    return json.dumps(payload, ensure_ascii=False, indent=2), len(payload)

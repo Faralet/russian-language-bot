@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import date, datetime, time
 from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -49,6 +50,12 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    referred_by: Mapped[Optional[int]] = mapped_column(BigInteger)
+    referral_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    current_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    longest_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    streak_freezes: Mapped[int] = mapped_column(Integer, nullable=False, default=2, server_default="2")
+    last_activity_on: Mapped[Optional[date]] = mapped_column(Date)
 
     lessons: Mapped[list["Lesson"]] = relationship(back_populates="user")
 
@@ -148,6 +155,9 @@ class LessonExercise(Base):
 
 class UserAnswer(Base):
     __tablename__ = "user_answers"
+    # Один вопрос в одном занятии — ровно один засчитанный ответ.
+    # Ограничение в БД защищает статистику от гонки при двойном клике.
+    __table_args__ = (UniqueConstraint("user_id", "lesson_id", "exercise_id", name="uq_user_lesson_exercise_answer"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -158,6 +168,26 @@ class UserAnswer(Base):
     is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
     answered_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     response_time_seconds: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+class UserExerciseReview(Base):
+    """Интервальное повторение ошибок: 1 - 3 - 7 дней.
+
+    Запись появляется после неверного ответа. Каждый верный ответ на
+    повторении продвигает stage; после прохождения всех интервалов
+    запись удаляется - правило считается усвоенным.
+    """
+
+    __tablename__ = "user_exercise_reviews"
+    __table_args__ = (UniqueConstraint("user_id", "exercise_id", name="uq_user_exercise_review"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    exercise_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False, index=True)
+    stage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_review_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    last_wrong_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
 
 class UserTopicProgress(Base):
@@ -184,6 +214,18 @@ class SavedRule(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     rule_text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class UserAchievement(Base):
+    """Разблокированные достижения пользователя (по одному коду на достижение)."""
+
+    __tablename__ = "user_achievements"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_achievement"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 
 class Subscription(Base):

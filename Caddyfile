@@ -1,0 +1,31 @@
+# Caddy: статика Mini App + прокси на API, автоматический HTTPS (Let's Encrypt).
+# Домен берётся из переменной окружения MINIAPP_DOMAIN (задаётся в .env).
+{$MINIAPP_DOMAIN} {
+	encode zstd gzip
+
+	# Запросы к API уходят на uvicorn (FastAPI), путь сохраняется (/api/...).
+	@api path /api/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	# Всё остальное — статический фронтенд Mini App.
+	handle {
+		root * /srv/miniapp
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+:8088 {
+  encode zstd gzip
+  @api path /api/*
+  handle @api {
+    reverse_proxy 127.0.0.1:8081
+  }
+  handle {
+    root * /srv/miniapp
+    try_files {path} /index.html
+    file_server
+  }
+}

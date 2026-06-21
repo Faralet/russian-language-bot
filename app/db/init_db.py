@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,9 +12,41 @@ from app.db.models import Base, Exercise, ExerciseOption, Topic
 from app.db.session import async_session_factory, engine
 
 
+logger = logging.getLogger(__name__)
+
+
 async def create_tables() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+async def apply_safe_migrations() -> None:
+    """Мини-миграции для баз, созданных предыдущими версиями.
+
+    create_all не меняет существующие таблицы, поэтому уникальный индекс
+    против двойного засчитывания ответа добавляем отдельно и безопасно.
+    """
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_user_lesson_exercise_answer "
+                    "ON user_answers (user_id, lesson_id, exercise_id)"
+                )
+            )
+            # Поля рефералки. create_all не меняет существующую таблицу users,
+            # поэтому добавляем колонки отдельно и безопасно.
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by bigint"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_count integer NOT NULL DEFAULT 0"))
+            # Серии и заморозка серии (Duolingo-style).
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak integer NOT NULL DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS longest_streak integer NOT NULL DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_freezes integer NOT NULL DEFAULT 2"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_on date"))
+    except Exception as exc:  # noqa: BLE001
+        # Если в старой базе уже есть дубли ответов, индекс не создастся.
+        # Бот продолжит работать: защита на уровне приложения остается.
+        logger.warning("Не удалось применить безопасные миграции: %s", exc)
 
 
 async def seed_topics(session: AsyncSession) -> dict[str, Topic]:
@@ -85,7 +118,7 @@ async def seed_exercises(session: AsyncSession, topics_by_slug: dict[str, Topic]
         exercise = Exercise(
             topic_id=topic.id,
             source="manual",
-            type="single_choice",
+            type=item.get("type", "single_choice"),
             level=item.get("level", "basic"),
             question=item["question"],
             short_explanation=item["short_explanation"],
@@ -118,8 +151,62 @@ async def seed_exercises(session: AsyncSession, topics_by_slug: dict[str, Topic]
         await session.commit()
 
 
+# Шаблонный наполнитель из ранних версий контента (признак "сгенерировано ИИ").
+# Эти строки повторялись в сотнях заданий, поэтому вычищаем их из базы.
+GENERIC_FACTS = (
+    "Маленькая языковая точность часто делает речь заметно сильнее.",
+    "Ударение - маленькая деталь, которая быстро показывает уровень речи.",
+)
+FILLER_SUFFIX = " Это правило лучше запоминать не отдельно, а через живой пример."
+
+
+async def cleanup_generated_filler() -> None:
+    """Однократно (идемпотентно) убирает шаблонный наполнитель из заданий.
+
+    1. Снимает одинаковый "интересный факт", повторявшийся в сотнях заданий.
+    2. Срезает шаблонную приписку из подробного объяснения.
+    3. Если после очистки подробное объяснение совпало с коротким - убирает
+       дубль (None), чтобы кнопка "Подробнее" не показывала тот же текст.
+
+    Запускается при старте: после первого прохода совпадений не остается,
+    поэтому повторные запуски ничего не меняют.
+    """
+    try:
+        async with engine.begin() as conn:
+            res1 = await conn.execute(
+                text(
+                    "UPDATE exercises SET interesting_fact = NULL "
+                    "WHERE interesting_fact IN (:f1, :f2)"
+                ),
+                {"f1": GENERIC_FACTS[0], "f2": GENERIC_FACTS[1]},
+            )
+            res2 = await conn.execute(
+                text(
+                    "UPDATE exercises "
+                    "SET full_explanation = btrim(replace(full_explanation, :suffix, '')) "
+                    "WHERE full_explanation LIKE :like"
+                ),
+                {"suffix": FILLER_SUFFIX, "like": f"%{FILLER_SUFFIX.strip()}%"},
+            )
+            res3 = await conn.execute(
+                text(
+                    "UPDATE exercises SET full_explanation = NULL "
+                    "WHERE full_explanation IS NOT NULL "
+                    "AND btrim(full_explanation) = btrim(short_explanation)"
+                )
+            )
+        logger.info(
+            "Очистка наполнителя: факты=%s, приписки=%s, дубли_подробного=%s",
+            res1.rowcount, res2.rowcount, res3.rowcount,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Не удалось вычистить шаблонный наполнитель: %s", exc)
+
+
 async def init_database() -> None:
     await create_tables()
+    await apply_safe_migrations()
     async with async_session_factory() as session:
         topics_by_slug = await seed_topics(session)
         await seed_exercises(session, topics_by_slug)
+    await cleanup_generated_filler()

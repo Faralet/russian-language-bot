@@ -11,3 +11,7 @@ __pycache__/
 .vscode/
 logs/
 postgres_data/
+
+# session backups
+*.bak*
+.env.bak*

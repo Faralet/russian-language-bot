@@ -20,15 +20,26 @@ class Settings(BaseSettings):
     app_timezone: str = Field(default="Europe/Moscow", alias="APP_TIMEZONE")
     free_daily_question_limit: int = Field(default=5, alias="FREE_DAILY_QUESTION_LIMIT")
     lesson_questions_count: int = Field(default=5, alias="LESSON_QUESTIONS_COUNT")
+    # Урок в стиле Duolingo: несколько этапов по lesson_questions_count вопросов.
+    lesson_stages: int = Field(default=3, alias="LESSON_STAGES")
+    daily_goal_questions: int = Field(default=10, alias="DAILY_GOAL_QUESTIONS")
     run_db_init_on_startup: bool = Field(default=True, alias="RUN_DB_INIT_ON_STARTUP")
 
     enable_payments: bool = Field(default=False, alias="ENABLE_PAYMENTS")
     premium_month_stars: int = Field(default=299, alias="PREMIUM_MONTH_STARS")
     premium_month_days: int = Field(default=30, alias="PREMIUM_MONTH_DAYS")
 
+    welcome_bonus_days: int = Field(default=3, alias="WELCOME_BONUS_DAYS")
+    enable_admin_report: bool = Field(default=True, alias="ENABLE_ADMIN_REPORT")
+    admin_report_time: str = Field(default="09:00", alias="ADMIN_REPORT_TIME")
+
     enable_ai: bool = Field(default=False, alias="ENABLE_AI")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str | None = Field(default=None, alias="OPENAI_MODEL")
+    openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
+
+    # URL Telegram Mini App. Пусто = кнопка приложения не показывается (бот работает как обычно).
+    miniapp_url: str = Field(default="", alias="MINIAPP_URL")
 
     model_config = SettingsConfigDict(
         env_file=".env",

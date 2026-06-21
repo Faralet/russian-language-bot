@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time
 
 from aiogram.types import User as TelegramUser
 from sqlalchemy import select
@@ -60,6 +60,21 @@ async def set_goal(session: AsyncSession, user: User, goal: str) -> User:
 async def set_level(session: AsyncSession, user: User, level: str) -> User:
     user.level = level
     user.last_active_at = datetime.utcnow()
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def set_notifications_enabled(session: AsyncSession, user: User, enabled: bool) -> User:
+    user.notifications_enabled = enabled
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def set_notification_time(session: AsyncSession, user: User, value: time) -> User:
+    user.notification_time = value
+    user.notifications_enabled = True
     await session.commit()
     await session.refresh(user)
     return user

@@ -3394,3 +3394,63 @@ EXERCISES = [{'topic_slug': 'governing',
   'tags': ['ЕГЭ', 'ОГЭ', 'экзамен'],
   'difficulty_score': 8,
   'exam_type': 'oge'}]
+
+
+# v3.3: дополнительный контент подключается из отдельного файла,
+# чтобы базовый список оставался неизменным для диффов.
+from app.data.seed_content_extra import EXTRA_EXERCISES  # noqa: E402
+
+EXERCISES.extend(EXTRA_EXERCISES)
+
+# Пакет заданий в формате ФИПИ (ЕГЭ): ударения, паронимы, грамматические
+# и лексические нормы. Оригинальные задания на нормах ФИПИ.
+from app.data.seed_content_ege import EGE_EXERCISES  # noqa: E402
+
+EXERCISES.extend(EGE_EXERCISES)
+
+# Пакет 2: орфография (№9-15) и пунктуация (№16-21) в формате ФИПИ.
+from app.data.seed_content_orth import ORTH_EXERCISES  # noqa: E402
+
+EXERCISES.extend(ORTH_EXERCISES)
+
+# Пакет 3: задания с вводом ответа (формат ЕГЭ «впиши слово»).
+from app.data.seed_content_input import INPUT_EXERCISES  # noqa: E402
+
+EXERCISES.extend(INPUT_EXERCISES)
+
+# Пакет 4: работа с текстом (№1-3, 23-26) и доп-ввод (ударения, пунктуация).
+from app.data.seed_content_text import TEXT_EXERCISES  # noqa: E402
+from app.data.seed_content_input_ext import INPUT_EXT_EXERCISES  # noqa: E402
+
+EXERCISES.extend(TEXT_EXERCISES)
+EXERCISES.extend(INPUT_EXT_EXERCISES)
+
+# Пакет 5: углубление банка по ключевым заданиям (ударения, паронимы, орфография, формы).
+from app.data.seed_content_depth import DEPTH_EXERCISES  # noqa: E402
+
+EXERCISES.extend(DEPTH_EXERCISES)
+
+# Пакет 6: дополнительный набор по номерам (№4, №5, №6, №9-15, №7).
+from app.data.seed_content_pack2 import PACK2_EXERCISES  # noqa: E402
+
+EXERCISES.extend(PACK2_EXERCISES)
+
+# Пакет 7: добор тонких мест (пунктуация №16-21, синтаксис №8, орфография, лексика).
+from app.data.seed_content_pack3 import PACK3_EXERCISES  # noqa: E402
+
+EXERCISES.extend(PACK3_EXERCISES)
+
+# Пакет 8: синтаксис №8 и анализ текста №1-3, 23-26.
+from app.data.seed_content_pack4 import PACK4_EXERCISES  # noqa: E402
+
+EXERCISES.extend(PACK4_EXERCISES)
+
+# Пакет 9: крупное наполнение (ударения, паронимы, орфография, формы, пунктуация, лексика).
+from app.data.seed_content_pack5 import PACK5_EXERCISES  # noqa: E402
+
+EXERCISES.extend(PACK5_EXERCISES)
+
+# Пакет 10: дальнейшее наполнение (ударения, паронимы, орфография, пунктуация, лексика, формы).
+from app.data.seed_content_pack6 import PACK6_EXERCISES  # noqa: E402
+
+EXERCISES.extend(PACK6_EXERCISES)

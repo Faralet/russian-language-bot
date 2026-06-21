@@ -8,7 +8,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,9 +19,12 @@ from app.services.admin_service import (
     ContentValidationError,
     create_exercise_from_payload,
     delete_exercise_by_id,
+    export_exercises_json,
     get_admin_stats,
+    get_exercise_text,
     get_topics_text,
     list_recent_exercises,
+    search_exercises_text,
     set_exercise_status,
     update_exercise_from_payload,
 )
@@ -148,9 +151,12 @@ async def admin_exercises(callback: CallbackQuery, session: AsyncSession) -> Non
         "Управление контентом:",
         "• <code>/add_exercise</code> - добавить одно или много упражнений JSON",
         "• <code>/edit_exercise ID</code> - исправить упражнение JSON-патчем",
+        "• <code>/exercise ID</code> - посмотреть упражнение",
+        "• <code>/search_exercises текст</code> - найти упражнения",
+        "• <code>/export_exercises [статус]</code> - выгрузить в JSON-файл",
         "• <code>/publish_exercise ID</code> - опубликовать",
         "• <code>/archive_exercise ID</code> - убрать из выдачи",
-        "• <code>/delete_exercise ID</code> - удалить",
+        "• <code>/delete_exercise ID</code> - мягко удалить (история ответов сохраняется)",
     ])
     await callback.message.answer("\n".join(lines))
     await callback.answer()
@@ -331,9 +337,61 @@ async def admin_delete_exercise(message: Message, session: AsyncSession) -> None
     try:
         admin_user_id = await _get_admin_user_id(session, message)
         await delete_exercise_by_id(session, exercise_id, admin_user_id=admin_user_id)
-        await message.answer(f"Упражнение <b>#{exercise_id}</b> удалено.")
+        await message.answer(
+            f"Упражнение <b>#{exercise_id}</b> помечено как удаленное.\n"
+            "Оно больше не показывается пользователям, но история ответов и статистика сохранены."
+        )
     except ContentValidationError as exc:
         await message.answer(str(exc))
+
+
+@router.message(Command("exercise"))
+async def admin_view_exercise(message: Message, session: AsyncSession) -> None:
+    assert message.from_user is not None
+    if not is_admin_telegram_id(message.from_user.id):
+        await message.answer("Нет доступа.")
+        return
+    exercise_id = await _parse_exercise_id_from_command(message, "exercise")
+    if exercise_id is None:
+        return
+    try:
+        await message.answer(await get_exercise_text(session, exercise_id))
+    except ContentValidationError as exc:
+        await message.answer(str(exc))
+
+
+@router.message(Command("search_exercises"))
+async def admin_search_exercises(message: Message, session: AsyncSession) -> None:
+    assert message.from_user is not None
+    if not is_admin_telegram_id(message.from_user.id):
+        await message.answer("Нет доступа.")
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) != 2 or not parts[1].strip():
+        await message.answer("Формат: <code>/search_exercises текст запроса</code>")
+        return
+    await message.answer(await search_exercises_text(session, parts[1].strip()))
+
+
+@router.message(Command("export_exercises"))
+async def admin_export_exercises(message: Message, session: AsyncSession) -> None:
+    assert message.from_user is not None
+    if not is_admin_telegram_id(message.from_user.id):
+        await message.answer("Нет доступа.")
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    status = parts[1].strip().lower() if len(parts) == 2 and parts[1].strip() else None
+    try:
+        json_text, count = await export_exercises_json(session, status=status)
+    except ContentValidationError as exc:
+        await message.answer(str(exc))
+        return
+    if count == 0:
+        await message.answer("Нечего экспортировать: упражнений с такими условиями нет.")
+        return
+    suffix = f"_{status}" if status else ""
+    document = BufferedInputFile(json_text.encode("utf-8"), filename=f"exercises{suffix}.json")
+    await message.answer_document(document, caption=f"Экспортировано упражнений: {count}")
 
 
 @router.callback_query(F.data == "admin:ai")
