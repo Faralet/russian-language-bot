@@ -4,6 +4,7 @@ from datetime import datetime, time
 
 from aiogram.types import User as TelegramUser
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -29,9 +30,19 @@ async def get_or_create_user(session: AsyncSession, tg_user: TelegramUser) -> Us
             last_active_at=datetime.utcnow(),
         )
         session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        return user
+        try:
+            await session.commit()
+            await session.refresh(user)
+            return user
+        except IntegrityError:
+            # Гонка: запись создана параллельной обработкой апдейта (unique
+            # telegram_id). Откат, читаем готового пользователя, обновляем общим путём.
+            await session.rollback()
+            user = (
+                await session.execute(select(User).where(User.telegram_id == tg_user.id))
+            ).scalar_one_or_none()
+            if user is None:
+                raise
 
     user.username = tg_user.username
     user.first_name = tg_user.first_name

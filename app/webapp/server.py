@@ -82,18 +82,31 @@ async def _get_or_create_user(session: AsyncSession, tg: dict) -> User:
     user = (
         await session.execute(select(User).where(User.telegram_id == tid))
     ).scalar_one_or_none()
-    if user is None:
-        user = User(
-            telegram_id=tid,
-            username=tg.get("username"),
-            first_name=tg.get("first_name"),
-            last_name=tg.get("last_name"),
-            language_code=tg.get("language_code"),
-        )
-        session.add(user)
+    if user is not None:
+        return user
+
+    user = User(
+        telegram_id=tid,
+        username=tg.get("username"),
+        first_name=tg.get("first_name"),
+        last_name=tg.get("last_name"),
+        language_code=tg.get("language_code"),
+    )
+    session.add(user)
+    try:
         await session.commit()
         await session.refresh(user)
-    return user
+        return user
+    except IntegrityError:
+        # Гонка первого открытия Mini App: параллельные запросы вставляют одного
+        # пользователя (unique telegram_id). Откатываемся и читаем готовую запись.
+        await session.rollback()
+        existing = (
+            await session.execute(select(User).where(User.telegram_id == tid))
+        ).scalar_one_or_none()
+        if existing is None:
+            raise
+        return existing
 
 
 @app.get("/api/health")
