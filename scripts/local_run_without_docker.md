@@ -12,7 +12,7 @@ cp .env.example .env
 В `.env` нужно указать локальную БД PostgreSQL:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://russian_bot:russian_bot_password@localhost:5432/russian_bot
+DATABASE_URL=postgresql+asyncpg://russian_bot:CHANGE_ME_SET_IN_ENV@localhost:5432/russian_bot
 ```
 
 Запуск:

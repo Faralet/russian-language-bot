@@ -4,9 +4,9 @@ services:
     container_name: russian_language_bot_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: russian_bot
-      POSTGRES_USER: russian_bot
-      POSTGRES_PASSWORD: russian_bot_password
+      POSTGRES_DB: ${POSTGRES_DB:-russian_bot}
+      POSTGRES_USER: ${POSTGRES_USER:-russian_bot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
