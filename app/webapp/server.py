@@ -21,7 +21,7 @@ from app.config import get_settings
 from app.db.models import Exercise, ExerciseOption, Lesson, LessonExercise, User, UserAnswer
 from app.db.session import async_session_factory
 from app.webapp.auth import parse_and_validate
-from app.services.lesson_service import answer_exercise, answer_text_exercise
+from app.services.lesson_service import answer_exercise, answer_text_exercise, today_bounds_utc
 from app.services.streak_service import register_daily_activity_for
 
 try:
@@ -117,13 +117,15 @@ async def me(tg: dict = Depends(get_tg_user)) -> dict:
                 .where(UserAnswer.user_id == user.id, UserAnswer.is_correct.is_(True))
             )
         ).scalar_one()
+        _ds, _de = today_bounds_utc()
         answered_today = (
             await session.execute(
                 select(func.count())
                 .select_from(UserAnswer)
                 .where(
                     UserAnswer.user_id == user.id,
-                    func.date(UserAnswer.answered_at) == func.current_date(),
+                    UserAnswer.answered_at >= _ds,
+                    UserAnswer.answered_at < _de,
                 )
             )
         ).scalar_one()
