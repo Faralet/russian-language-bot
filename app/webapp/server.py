@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.db.models import Exercise, ExerciseOption, Lesson, LessonExercise, User, UserAnswer
+from app.db.models import Exercise, ExerciseOption, Lesson, LessonExercise, Topic, User, UserAnswer
 from app.db.session import async_session_factory
 from app.webapp.auth import parse_and_validate
 from app.services.lesson_service import answer_exercise, answer_text_exercise, today_bounds_utc
@@ -157,18 +157,22 @@ async def me(tg: dict = Depends(get_tg_user)) -> dict:
 
 
 @app.get("/api/lesson")
-async def lesson(tg: dict = Depends(get_tg_user)) -> dict:
+async def lesson(topic: str | None = None, tg: dict = Depends(get_tg_user)) -> dict:
     count = max(1, settings.lesson_questions_count * settings.lesson_stages)
     async with async_session_factory() as session:
         user = await _get_or_create_user(session, tg)
+        base_q = select(Exercise).where(Exercise.status == "published")
+        scoped_q = base_q
+        if topic:
+            scoped_q = base_q.join(Topic, Topic.id == Exercise.topic_id).where(Topic.slug == topic)
         exercises = (
-            await session.execute(
-                select(Exercise)
-                .where(Exercise.status == "published")
-                .order_by(func.random())
-                .limit(count)
-            )
+            await session.execute(scoped_q.order_by(func.random()).limit(count))
         ).scalars().all()
+        if not exercises and topic:
+            # В выбранной теме нет заданий — не оставляем пользователя с пустым уроком.
+            exercises = (
+                await session.execute(base_q.order_by(func.random()).limit(count))
+            ).scalars().all()
         if not exercises:
             raise HTTPException(status_code=404, detail="Нет опубликованных заданий")
 

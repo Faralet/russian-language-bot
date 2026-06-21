@@ -110,10 +110,10 @@ body{font-family:'Manrope',-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
     </div>
     <p class="sec">Тренажёры</p>
     <div class="grid">
-      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#e7edff;color:#2f54e0"><i class="ti ti-volume"></i></div><span class="tt">Ударения</span><span class="ts">орфоэпия</span></button>
-      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#def7f4;color:#0fb3a3"><i class="ti ti-typography"></i></div><span class="tt">Паронимы</span><span class="ts">выбор слова</span></button>
-      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#ffeee9;color:#ff6b5b"><i class="ti ti-pencil"></i></div><span class="tt">Сочинение</span><span class="ts">К1–К12</span></button>
-      <button class="tile" onclick="startLesson()"><div class="tic" style="background:#fff2d8;color:#f59a06"><i class="ti ti-book-2"></i></div><span class="tt">Текст ЕГЭ</span><span class="ts">№1–3, 22–26</span></button>
+      <button class="tile" onclick="startLesson('stress')"><div class="tic" style="background:#e7edff;color:#2f54e0"><i class="ti ti-volume"></i></div><span class="tt">Ударения</span><span class="ts">орфоэпия</span></button>
+      <button class="tile" onclick="startLesson('paronyms')"><div class="tic" style="background:#def7f4;color:#0fb3a3"><i class="ti ti-typography"></i></div><span class="tt">Паронимы</span><span class="ts">выбор слова</span></button>
+      <button class="tile" onclick="startLesson('spelling')"><div class="tic" style="background:#ffeee9;color:#ff6b5b"><i class="ti ti-pencil"></i></div><span class="tt">Орфография</span><span class="ts">правописание</span></button>
+      <button class="tile" onclick="startLesson('exam')"><div class="tic" style="background:#fff2d8;color:#f59a06"><i class="ti ti-book-2"></i></div><span class="tt">Текст ЕГЭ</span><span class="ts">№1–3, 22–26</span></button>
     </div>
     <p class="sec">Твой прогресс</p>
     <button class="prog" onclick="go('score')">
@@ -176,7 +176,7 @@ if(TG){try{TG.expand();TG.ready();if(TG.setHeaderColor)TG.setHeaderColor('#f2f5f
 function hap(t){try{if(TG&&TG.HapticFeedback)TG.HapticFeedback.impactOccurred(t||'light');}catch(e){}}
 var API='/api';
 function authHeaders(){var h={'Content-Type':'application/json'};if(TG&&TG.initData)h['Authorization']='tma '+TG.initData;return h;}
-async function api(path,opts){opts=opts||{};opts.headers=authHeaders();var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},12000);opts.signal=ctl.signal;var r;try{r=await fetch(API+path,opts);}finally{clearTimeout(tm);}if(!r.ok)throw new Error('api '+r.status);return r.json();}
+async function api(path,opts){opts=opts||{};opts.headers=authHeaders();var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},8000);opts.signal=ctl.signal;var r;try{r=await fetch(API+path,opts);}finally{clearTimeout(tm);}if(!r.ok)throw new Error('api '+r.status);return r.json();}
 var COLORS=['#2f54e0','#19c5b6','#ff9f1c','#ff6b5b','#4f8bff'];
 function pop(){for(var i=0;i<16;i++){var c=document.createElement('div');c.className='pop';c.style.left=(window.innerWidth/2-40+Math.random()*80)+'px';c.style.top=(window.innerHeight*0.34+Math.random()*24)+'px';c.style.background=COLORS[i%COLORS.length];c.style.setProperty('--dx',(Math.random()*180-90)+'px');c.style.setProperty('--dy',(-90-Math.random()*80)+'px');document.body.appendChild(c);setTimeout(function(el){return function(){el.remove();};}(c),820);}}
 var screens=['home','lesson','score','profile'];
@@ -226,15 +226,15 @@ function renderMe(m){
 }
 async function loadMe(){try{renderMe(await api('/me'));demo=false;}catch(e){demo=true;renderMe(DEMO_ME);}}
 
-var QS=[],lessonId=null,qi=0,sel=-1,state='await',perStage=5;
-function lessonError(){var s=document.getElementById('step');if(s)s.textContent='';document.getElementById('q').textContent='Не удалось загрузить задания';document.getElementById('opts').innerHTML='<p class="muted" style="margin:0 0 14px">Проверь соединение и попробуй еще раз.</p>';document.getElementById('exp').className='exp';var b=document.getElementById('btn');b.className='btn';b.textContent='Повторить';b.onclick=startLesson;}
-async function startLesson(){
+var curTopic=null;var QS=[],lessonId=null,qi=0,sel=-1,state='await',perStage=5;
+function lessonError(){var s=document.getElementById('step');if(s)s.textContent='';document.getElementById('q').textContent='Не удалось загрузить задания';document.getElementById('opts').innerHTML='<p class="muted" style="margin:0 0 14px">Проверь соединение и попробуй еще раз.</p>';document.getElementById('exp').className='exp';var b=document.getElementById('btn');b.className='btn';b.textContent='Повторить';b.onclick=function(){startLesson(curTopic);};}
+async function startLesson(topic){curTopic=topic;
   go('lesson');
   document.getElementById('step').textContent='Загрузка…';
   document.getElementById('q').innerHTML='<span class="skl" style="display:block;height:26px;width:80%"></span>';
   document.getElementById('opts').innerHTML='<div class="skl" style="height:54px;margin-bottom:12px"></div><div class="skl" style="height:54px"></div>';
   document.getElementById('exp').className='exp';document.getElementById('btn').className='btn dis';
-  try{var d=await api('/lesson');QS=d.questions;lessonId=d.lesson_id;perStage=d.per_stage||5;demo=false;}
+  try{var d=await api('/lesson'+(topic?'?topic='+topic:''));QS=d.questions;lessonId=d.lesson_id;perStage=d.per_stage||5;demo=false;}
   catch(e){if(TG&&TG.initData){lessonError();return;}demo=true;QS=DEMO_QS.slice();lessonId=null;perStage=5;}
   qi=0;renderQ();
 }
